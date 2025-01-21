@@ -1,4 +1,14 @@
 
+# MFU计算器
+
+[mfu_calculation](mfu_calculation.ipynb)里面给出了简化版本的moe计算器，
+调整参数计算训练模型的MFU，可以在线运行。
+
+
+[mfu_detail](./mfu_detail.ipynb) 给出了计算器搭建的详解。 
+
+# 内容：
+
 主要介绍LLM（GPT/Llama/MoE）中一些操作层、模块的flops计算量，帮助理解MFU计算过程。
 
 ![transformer架构](./images/transformer.png)
@@ -205,12 +215,13 @@ class LlamaRMSNorm(nn.Module):
 
   4 * batch_size * seq_len * hidden_size
 
-"""
-
+```
 def calcu_rmsnorm_flops(batch_size, seq_len, hidden_size):
   return 4 * batch_size * seq_len * hidden_size
 
-"""## MLP/FFN层的计算
+```
+
+## MLP/FFN层的计算
 
 MLP层的构建常见的方式如下：
 
