@@ -3,7 +3,9 @@
 
 **MFU计算器**：用于评估LLM训练的MFU（Model Flops Utilization）计算工具，
 
-[mfu_calculation](mfu_calculation.ipynb)里面给出了简化版本的MFU计算器，可以在线运行。
+在线MoE运行工具：[链接](https://calvinxky.github.io/mfu_calculation/)
+
+[mfu_calculation](mfu_calculation.ipynb)里面给出了简化版本的MFU计算器，可以在colab运行。
 
 [mfu_detail](./mfu_detail.ipynb) 给出了MFU计算器搭建的详解。 
 
