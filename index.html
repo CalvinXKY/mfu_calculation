@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MFU Calculation（MoE）</title>
+    <title>MFU Calculation</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -55,86 +55,201 @@
         button:hover {
             background-color: #0056b3;
         }
+        .main-container {
+            display: flex;
+            max-width: 1200px;
+            margin: auto;
+            gap: 20px;
+        }
+        .input-container {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .formula-container {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-family: monospace;
+        }
+        .formula-group {
+            margin-bottom: 15px;
+        }
+        .formula-input {
+            width: 100%;
+            font-family: monospace;
+            padding: 5px;
+            margin-top: 5px;
+        }
     </style>
 </head>
 
 <a class="ads" href="https://github.com/CalvinXKY/mfu_calculation">Welcome to star this project❤</a>
 <body>
-    <div class="container">
-        <h1 style="text-align: center;">MFU Calculation（MoE）</h1>
-        <div id="input-container">
-            <div class="input-group">
-                <label for="gpu_top_flops">gpu_top_flops（TFLOS/s）：</label>
-                <input type="number" id="gpu_top_flops" class="number-input" value="280">
+    <div class="main-container">
+        <div class="input-container">
+            <h1 style="text-align: center;">MFU Calculation</h1>
+            <div id="input-container">
+                <div class="input-group">
+                    <label for="gpu_top_flops">gpu_top_flops（TFLOS/s）：</label>
+                    <input type="number" id="gpu_top_flops" class="number-input" value="280">
+                </div>
+                <div class="input-group">
+                    <label for="gpu_nums">gpu_nums：</label>
+                    <input type="number" id="gpu_nums" class="number-input" value="1024">
+                </div>
+                <div class="input-group">
+                    <label for="gbs">gbs（global batch size）：</label>
+                    <input type="number" id="gbs" class="number-input" value="1024">
+                </div>
+                <div class="input-group">
+                    <label for="seq_len">seq_len：</label>
+                    <input type="number" id="seq_len" class="number-input" value="4096">
+                </div>
+                <div class="input-group">
+                    <label for="hidden_size">hidden_size（=num_heads * d_model）：</label>
+                    <input type="number" id="hidden_size" class="number-input" value="1024">
+                </div>
+                <div class="input-group">
+                    <label for="num_heads">num_heads：</label>
+                    <input type="number" id="num_heads" class="number-input" value="8">
+                </div>
+                <div class="input-group">
+                    <label for="d_model">d_model：</label>
+                    <input type="number" id="d_model" class="number-input" value="128">
+                </div>
+                <div class="input-group">
+                    <label for="vocab_size">vocab_size：</label>
+                    <input type="number" id="vocab_size" class="number-input" value="32768">
+                </div>
+                <div class="input-group">
+                    <label for="num_query_groups">MQA（num_query_groups）：</label>
+                    <input type="number" id="num_query_groups" class="number-input" value="4">
+                </div>
+                <div class="input-group">
+                    <label for="ffn_hidden_size">ffn_hidden_size：</label>
+                    <input type="number" id="ffn_hidden_size" class="number-input" value="2048">
+                </div>
+                <div class="input-group">
+                    <label for="layer_nums">layer_nums：</label>
+                    <input type="number" id="layer_nums" class="number-input" value="100">
+                </div>
+                <div class="input-group">
+                    <label for="cp">cp(context parallel)：</label>
+                    <input type="number" id="cp" class="number-input" value="1">
+                </div>
+                <div class="input-group">
+                    <label for="share_experts">share_experts：</label>
+                    <input type="number" id="share_experts" class="number-input" value="1">
+                </div>
+                <div class="input-group">
+                    <label for="top_k">top_k（default: 0）：</label>
+                    <input type="number" id="top_k" class="number-input" value="8">
+                </div>
+                <div class="input-group">
+                    <label for="int15">None（default）</label>
+                    <input type="number" id="int15" class="number-input" value="0">
+                </div>
+                <div class="input-group">
+                    <label for="step_time">step_time：</label>
+                    <input type="number" id="step_time" class="number-input" step="0.01" value="1.5">
+                </div>
             </div>
-            <div class="input-group">
-                <label for="gpu_nums">gpu_nums：</label>
-                <input type="number" id="gpu_nums" class="number-input" value="1024">
+            <button onclick="processParameters()">Get Result</button>
+            <div class="result" id="result">0</div>
+        </div>
+        
+        <div class="formula-container">
+            <h2>Calculation Formulas</h2>
+            
+            <!-- 添加模型选择单选按钮组 -->
+            <div class="model-selector" style="margin-bottom: 20px;">
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Model Type:</label>
+                <input type="radio" id="moe_model" name="model_type" value="moe" checked>
+                <label for="moe_model">MoE</label>
+                <input type="radio" id="llama_model" name="model_type" value="llama" style="margin-left: 15px;">
+                <label for="llama_model">Llama</label>
+                <input type="radio" id="gpt_model" name="model_type" value="gpt" style="margin-left: 15px;">
+                <label for="gpt_model">GPT</label>
             </div>
-            <div class="input-group">
-                <label for="gbs">gbs（global batch size）：</label>
-                <input type="number" id="gbs" class="number-input" value="1024">
+            
+            <div class="formula-group">
+                <label>Embedding Flops:</label>
+                <input type="text" class="formula-input" id="embedding_formula" 
+                    value="gbs * seq_len * hidden_size * vocab_size" onchange="updateFormulas()">
             </div>
-            <div class="input-group">
-                <label for="seq_len">seq_len：</label>
-                <input type="number" id="seq_len" class="number-input" value="4096">
+            <div class="formula-group">
+                <label>Attention Layer Flops:</label>
+                <input type="text" class="formula-input" id="attention_formula" 
+                    value="q_linear + kv_linear + kv_scores + v_projection + out_linear" onchange="updateFormulas()">
             </div>
-            <div class="input-group">
-                <label for="hidden_size">hidden_size（=num_heads * d_model）：</label>
-                <input type="number" id="hidden_size" class="number-input" value="1024">
+            <div class="formula-group">
+                <label>MLP Layer Flops:</label>
+                <input type="text" class="formula-input" id="mlp_formula" 
+                    value="3 * gbs * seq_len * hidden_size * ffn_hidden_size" onchange="updateFormulas()">
             </div>
-            <div class="input-group">
-                <label for="num_heads">num_heads：</label>
-                <input type="number" id="num_heads" class="number-input" value="8">
+            <div class="formula-group">
+                <label>MoE Layer Flops:</label>
+                <input type="text" class="formula-input" id="moe_formula" 
+                    value="mlp_layer_flops * (share_experts + top_k)" onchange="updateFormulas()">
             </div>
-            <div class="input-group">
-                <label for="d_model">d_model：</label>
-                <input type="number" id="d_model" class="number-input" value="128">
+            <div class="formula-group">
+                <label>Total Model Flops:</label>
+                <input type="text" class="formula-input" id="model_formula" 
+                    value="3 * 2 * (embedding_flops + layer_nums * (attention_layer_flops + moe_layer_flops + layer_norm))" onchange="updateFormulas()">
             </div>
-            <div class="input-group">
-                <label for="vocab_size">vocab_size：</label>
-                <input type="number" id="vocab_size" class="number-input" value="32768">
-            </div>
-            <div class="input-group">
-                <label for="num_query_groups">MQA（num_query_groups）：</label>
-                <input type="number" id="num_query_groups" class="number-input" value="4">
-            </div>
-            <div class="input-group">
-                <label for="ffn_hidden_size">ffn_hidden_size：</label>
-                <input type="number" id="ffn_hidden_size" class="number-input" value="2048">
-            </div>
-            <div class="input-group">
-                <label for="layer_nums">layer_nums：</label>
-                <input type="number" id="layer_nums" class="number-input" value="100">
-            </div>
-            <div class="input-group">
-                <label for="cp">cp(context parallel)：</label>
-                <input type="number" id="cp" class="number-input" value="1">
-            </div>
-            <div class="input-group">
-                <label for="share_experts">share_experts：</label>
-                <input type="number" id="share_experts" class="number-input" value="1">
-            </div>
-            <div class="input-group">
-                <label for="top_k">top_k（default: 0）：</label>
-                <input type="number" id="top_k" class="number-input" value="8">
-            </div>
-            <div class="input-group">
-                <label for="int15">None（default）</label>
-                <input type="number" id="int15" class="number-input" value="0">
-            </div>
-            <div class="input-group">
-                <label for="step_time">step_time：</label>
-                <input type="number" id="step_time" class="number-input" step="0.01" value="1.5">
+            <div class="formula-group">
+                <label>MFU Calculation:</label>
+                <input type="text" class="formula-input" id="mfu_formula" 
+                    value="model_flops / (gpu_nums * step_time * (10 ** 12)) / gpu_top_flops" onchange="updateFormulas()">
             </div>
         </div>
-        <button onclick="processParameters()">Get Result</button>
-        <div class="result" id="result">0</div>
     </div>
 
     <script>
-        function processParameters() {
+        // 添加模型类型切换处理函数
+        function handleModelTypeChange() {
+            const llamaModel = document.getElementById('llama_model').checked;
+            const gptModel = document.getElementById('gpt_model').checked;
+            const shareExpertsInput = document.getElementById('share_experts');
+            const topKInput = document.getElementById('top_k');
+            const mlpFormulaInput = document.getElementById('mlp_formula');
+            
+            if (llamaModel || gptModel) {
+                // Llama/GPT模式：锁定输入框并设置值
+                shareExpertsInput.value = "1";
+                topKInput.value = "0";
+                shareExpertsInput.disabled = true;
+                topKInput.disabled = true;
+                
+                // 如果是GPT模式，修改MLP公式显示
+                if (gptModel) {
+                    mlpFormulaInput.value = "2 * gbs * seq_len * hidden_size * ffn_hidden_size";
+                } else {
+                    mlpFormulaInput.value = "3 * gbs * seq_len * hidden_size * ffn_hidden_size";
+                }
+            } else {
+                // MoE模式：解锁输入框并恢复原始公式
+                shareExpertsInput.disabled = false;
+                topKInput.disabled = false;
+                mlpFormulaInput.value = "3 * gbs * seq_len * hidden_size * ffn_hidden_size";
+            }
+            
+            // 更新计算结果
+            processParameters();
+        }
 
+        // 为单选按钮添加事件监听器
+        document.getElementById('moe_model').addEventListener('change', handleModelTypeChange);
+        document.getElementById('llama_model').addEventListener('change', handleModelTypeChange);
+        document.getElementById('gpt_model').addEventListener('change', handleModelTypeChange);
+
+        function processParameters() {
+            // 获取所有输入参数
             const gpu_top_flops = parseFloat(document.getElementById('gpu_top_flops').value);
             const gpu_nums = parseFloat(document.getElementById('gpu_nums').value);
             const gbs = parseFloat(document.getElementById('gbs').value);
@@ -152,7 +267,6 @@
             const int15 = parseFloat(document.getElementById('int15').value);
             const step_time = parseFloat(document.getElementById('step_time').value);
 
-
             if (isNaN(gpu_top_flops) || isNaN(gpu_nums) || isNaN(gbs) || isNaN(seq_len) || isNaN(hidden_size) ||
                 isNaN(num_heads) || isNaN(vocab_size) || isNaN(num_query_groups) || isNaN(ffn_hidden_size) || isNaN(layer_nums) ||
                 isNaN(context_parallel) || isNaN(share_experts) || isNaN(top_k) || isNaN(d_model) || isNaN(int15) ||
@@ -161,27 +275,84 @@
                 return;
             }
 
-            embedding_flops = gbs * seq_len * hidden_size * vocab_size
-            q_linear = gbs * seq_len * hidden_size ** 2
-            kv_linear = gbs * seq_len * hidden_size * num_query_groups * d_model
-            kv_scores = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel)
-            v_projection = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel)
+            try {
+                // 从公式输入框获取最新的公式
+                const embedding_formula = document.getElementById('embedding_formula').value;
+                const attention_formula = document.getElementById('attention_formula').value;
+                const mlp_formula = document.getElementById('mlp_formula').value;
+                const moe_formula = document.getElementById('moe_formula').value;
+                const model_formula = document.getElementById('model_formula').value;
+                const mfu_formula = document.getElementById('mfu_formula').value;
 
-            out_linear = gbs * seq_len * hidden_size ** 2
-            attention_layer_flops = q_linear + kv_linear + kv_scores + v_projection + out_linear
-            layer_norm = gbs * seq_len * hidden_size
+                // 创建计算函数
+                const calculateResult = new Function(
+                    'gbs', 'seq_len', 'hidden_size', 'vocab_size', 'num_heads', 
+                    'd_model', 'num_query_groups', 'ffn_hidden_size', 'layer_nums',
+                    'context_parallel', 'share_experts', 'top_k', 'gpu_nums', 'step_time',
+                    'gpu_top_flops', 'is_gpt',
+                    `
+                    // 计算 embedding_flops
+                    const embedding_flops = ${embedding_formula};
+                    
+                    // 计算 attention 相关参数
+                    const q_linear = gbs * seq_len * hidden_size ** 2;
+                    const kv_linear = gbs * seq_len * hidden_size * num_query_groups * d_model;
+                    const kv_scores = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
+                    const v_projection = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
+                    const out_linear = gbs * seq_len * hidden_size ** 2;
+                    
+                    // GPT特殊处理
+                    if (is_gpt) {
+                        // 修改 mlp_layer_flops 的计算公式，将系数从 3 改为 2
+                        const mlp_layer_flops_original = ${mlp_formula};
+                        mlp_layer_flops = (2/3) * mlp_layer_flops_original;  // 将系数从 3 改为 2
+                    } else {
+                        // 非 GPT 模式使用原始公式
+                        mlp_layer_flops = ${mlp_formula};
+                    }
+                    
+                    // 计算 attention_layer_flops
+                    const attention_layer_flops = ${attention_formula};
+                    
+                    const layer_norm = gbs * seq_len * hidden_size;
+                    
+                    // 计算 moe_layer_flops
+                    const moe_layer_flops = ${moe_formula};
+                    
+                    // 计算总 model_flops
+                    const model_flops = ${model_formula};
+                    
+                    // 计算 MFU
+                    const mfu = ${mfu_formula};
+                    
+                    return {
+                        tflops_per_gpu: model_flops / (10 ** 12) / gpu_nums,
+                        mfu: mfu
+                    };
+                    `
+                );
 
-            mlp_layer_flops = 3 * gbs * seq_len * hidden_size * ffn_hidden_size
+                // 执行计算
+                const is_gpt = document.getElementById('gpt_model').checked;
+                const result = calculateResult(
+                    gbs, seq_len, hidden_size, vocab_size, num_heads,
+                    d_model, num_query_groups, ffn_hidden_size, layer_nums,
+                    context_parallel, share_experts, top_k, gpu_nums, step_time,
+                    gpu_top_flops, is_gpt
+                );
 
+                document.getElementById('result').innerText = 
+                    `TFLOP/GPU: ${result.tflops_per_gpu.toPrecision(4)} \n MFU：${result.mfu.toPrecision(4)}\n`;
 
-            moe_layer_flops = mlp_layer_flops * (share_experts + top_k)
-            model_flops = 3 * 2 * (embedding_flops + layer_nums * (attention_layer_flops + moe_layer_flops + layer_norm))
-
-            mfu = model_flops / (gpu_nums * step_time * (10 ** 12)) / gpu_top_flops
-
-            document.getElementById('result').innerText = `TFLOP/GPU: ${(model_flops/  (10 ** 12)/gpu_nums).toPrecision(4)} \n MFU：${mfu.toPrecision(4)}\n`  ;
+            } catch (error) {
+                console.error('Calculation error:', error);
+                document.getElementById('result').innerText = 'Formula Error: ' + error.message;
+            }
         }
 
+        function updateFormulas() {
+            processParameters();
+        }
     </script>
 </body>
 </html>

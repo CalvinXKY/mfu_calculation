@@ -1,9 +1,8 @@
-
 # MFU计算器
 
 **MFU计算器**：用于评估LLM训练的MFU（Model Flops Utilization）计算工具，
 
-在线MoE运行工具：[链接](https://calvinxky.github.io/mfu_calculation/)
+在线MoE运行工具：[链接](https://calvinxky.github.io/mfu_calculation/) 
 
 [mfu_calculation](mfu_calculation.ipynb)里面给出了简化版本的MFU计算器，可以在colab运行。
 
@@ -37,7 +36,7 @@ mp(n+(n-1)) = 2mnp - mp。
 2mn  - m
 
 对于transformer的线性层输入与输出一般用相同的大小，形状都为：[batch_size, seq_len, d_model],
-线性层的创建一般使用 Linear(hidden_size, hidden_size, bias=False)
+线性层的创建一般使用 nn.Linear(hidden_size, hidden_size, bias=False)
 所以计算量为：
 
 flops = 2 * batch_size * seq_len * hidden_size * hidden_size
@@ -123,7 +122,7 @@ class MultiHeadedAttention(Attention):
 * masked_fill计算
 
 对于主要运算中有个需要考虑点：
-* Attention的变化：query_attention的计算KV的heads数量与Q的heads数量不一致。
+* Attention的变化：query attention中KV的heads数量与Q的heads数量不一致。
 * 序列并行（context parallel/ring attention）: 考虑并行度。
 
 次要运算在估算flops时通常可以忽略，这里例出其计算方式：
@@ -133,7 +132,7 @@ softmax的flops计算量： 输入的shape：(bs, heads, seq_len, seq_len)
 
    3 * bs * heads * seq_len * (seq_len - 1)
 
-maked_fill是一个掩模操作包含：判断操作和赋值操作，假设是需要遍历整个矩阵，每个元素操作一次，而赋值操作仅对需要操作的元素赋值，输入矩阵的大小为[bs, heads, seq_len, seq_len], 操作的个数为X。所以计算量：
+masked_fill是一个掩码操作，包含判断操作和赋值操作，假设是需要遍历整个矩阵，每个元素操作一次，而赋值操作仅对需要操作的元素赋值，输入矩阵的大小为[bs, heads, seq_len, seq_len], 操作的个数为X。所以计算量：
 
    bs * heads *  seq_len * seq_len + X
 
@@ -294,7 +293,7 @@ def calcu_mlp_flops(batch_size, seq_len, hidden_size, ffn_hidden_size, use_gate=
 logits计算包含三个运算：
 
 * layernorm
-* linaer，(词表映射)
+* linear（词表映射）
 * softmax
 
 对应尺寸
@@ -387,7 +386,7 @@ def calcu_router_flops(batch_size, seq_len, hidden_size, experts):
 
 decoder_layer x N + logtis
 
-其中L是层数，decoder构成：
+其中N是层数，decoder构成：
 
 MHA + FFN + 2 LayerNorm
 
