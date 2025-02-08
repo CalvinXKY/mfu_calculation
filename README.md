@@ -157,6 +157,34 @@ def calcu_attention_flops(batch_size, seq_len, heads, d_model, num_query_groups=
 
 ```
 
+对于MLA（[Multi-head Latent Attention](https://arxiv.org/pdf/2405.04434))结构如下：
+
+![MLA架构](./images/mla_architecture.png)
+
+主要的计算变化是qkv的linear计算发生了变化，MLA的计算公式如下：
+
+![mla计算公式](./images/mla_formulas.png)
+
+构建其mfu的计算时，关注linear和attention的部分，flops的调整如下：
+```
+def calcu_mla_flops(batch_size, seq_len, heads, d_model, q_lora_rank, kv_lora_rank, context_parallel=1):
+    q_down_proj = calcu_linear_flops(batch_size, seq_len, heads * d_model, 1, q_lora_rank)         
+    q_up_proj  = calcu_linear_flops(batch_size, seq_len, q_lora_rank, heads, d_model)
+    q_linear_flops = q_down_proj + q_up_proj
+    kv_down_proj = calcu_linear_flops(batch_size, seq_len, heads * d_model, 1, kv_lora_rank)
+    kv_up_proj =calcu_linear_flops(batch_size, seq_len, kv_lora_rank, heads, d_model) * 2
+    kv_linear = kv_down_proj + kv_up_proj
+
+    kv_scores_flops = 2 * batch_size * seq_len**2 * heads * d_model * (context_parallel + 1) / (2 * context_parallel)
+    mask_flops = batch_size * heads *  seq_len * seq_len
+    softmax_flops = 3 * batch_size * heads * seq_len * (seq_len - 1)
+
+    qkv_flops = kv_scores_flops
+    out_linear_flops = calcu_linear_flops(batch_size, seq_len, heads * d_model)
+    return q_linear_flops + kv_linear + kv_scores_flops + mask_flops + softmax_flops + qkv_flops + out_linear_flops
+
+```
+
 ## LayerNorm/RMSNorm
 
 Layer_norm的计算内容一般如下：
@@ -427,7 +455,7 @@ def caclu_llama_flops(batch_size, seq_len, heads, d_model, hidden_size, vocab_si
 
 在llama结构基础上ffn增加topk专家数量系数，计算公式：
 
-(GMQA + FFN * Experts_topk + Router + RMSNorm) x L + logtis
+(MQA + FFN * Experts_topk + Router + RMSNorm) x L + logtis
 
 
 ```
@@ -445,6 +473,27 @@ MoE如果包括了共享专家(shared experts)，上述计算公式中将topk的
 
 topk + shared_experts_nums
 
+## MoE（deepseek）模型flops计算
+
+在MoE结构基础上添加共享专家，MQA替换成MLA：
+
+![deepseek结构](./images/deepseek_architecture.png)
+
+同样忽略一些影响较小的/低阶项，计算公式为：
+
+(MQA + FFN * (topk + shared) + Router) x L + logtis
+
+```
+def caclu_moe_deepseek_flops(batch_size, seq_len, heads, d_model, hidden_size, vocab_size, ffn_hidden_size, layer_nums, q_lora_rank, kv_lora_rank, topk, shared, experts):
+  attention_flops = calcu_mla_flops(batch_size, seq_len, heads, d_model, q_lora_rank, kv_lora_rank, context_parallel=1)
+  ffn_flops = calcu_mlp_flops(batch_size, seq_len, hidden_size, ffn_hidden_size, use_gate=True)
+  layer_norm_flops = calcu_layer_norm_flops(batch_size, seq_len, hidden_size)
+  logits_flops = calcu_logits_flops(batch_size, seq_len, heads, d_model, hidden_size, vocab_size)
+  router_flops = calcu_router_flops(batch_size, seq_len, hidden_size, experts)
+  return 3 * (logits_flops + (layer_norm_flops * 2 + attention_flops + ffn_flops * (topk + shared) + router_flops) * layer_nums)
+
+```
+
 # MFU计算
 
 MFU(Model Flops Utilization)计算的公式为：
@@ -461,6 +510,13 @@ def calcu_moe_mfu(iter_time, batch_size, seq_len, heads, d_model, hidden_size, v
     model_flops = caclu_moe_flops(batch_size, seq_len, heads, d_model, hidden_size, vocab_size, ffn_hidden_size, layer_nums, num_query_groups, topk, experts)
     return model_flops / (iter_time * device_peak_flops * device_nums * 10 ** 12)
 ```
+
+```
+def calcu_moe_deepseek_mfu(iter_time, batch_size, seq_len, heads, d_model, hidden_size, vocab_size, ffn_hidden_size, layer_nums, q_lora_rank, kv_lora_rank, topk, shared, experts, device_nums, device_peak_flops):
+    model_flops = caclu_moe_deepseek_flops(batch_size, seq_len, heads, d_model, hidden_size, vocab_size, ffn_hidden_size, layer_nums, q_lora_rank, kv_lora_rank, topk, shared, experts)
+    return model_flops / (iter_time * device_peak_flops * device_nums * 10 ** 12)
+```
+
 测试：
 ```
 calcu_moe_mfu(iter_time=1.5,
@@ -468,6 +524,14 @@ calcu_moe_mfu(iter_time=1.5,
        hidden_size=1024, vocab_size=32768, ffn_hidden_size=2048,
        layer_nums=100, num_query_groups=4, topk=9, experts=100,
        device_nums=1024, device_peak_flops=280)
+```
+
+```
+calcu_moe_deepseek_mfu(iter_time=1.5,
+            batch_size=1024, seq_len=4096, heads=8, d_model=128,
+            hidden_size=1024, vocab_size=32768, ffn_hidden_size=2048,
+            layer_nums=100, q_lora_rank=128, kv_lora_rank=256, topk=8, shared=1, experts=100,
+            device_nums=1024, device_peak_flops=280)
 ```
 
 # 参考内容：
@@ -483,3 +547,5 @@ https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/te_l
 https://github.com/huggingface/transformers/blob/v4.48.0/src/transformers/models/qwen2_moe/modeling_qwen2_moe.py#L603
 
 https://bbycroft.net/llm
+
+https://arxiv.org/pdf/2405.04434
