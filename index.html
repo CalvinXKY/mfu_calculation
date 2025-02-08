@@ -151,10 +151,6 @@
                     <input type="number" id="top_k" class="number-input" value="8">
                 </div>
                 <div class="input-group">
-                    <label for="int15">None（default）</label>
-                    <input type="number" id="int15" class="number-input" value="0">
-                </div>
-                <div class="input-group">
                     <label for="step_time">step_time(s)：</label>
                     <input type="number" id="step_time" class="number-input" step="0.01" value="1.5">
                 </div>
@@ -171,10 +167,23 @@
                 <label style="font-weight: bold; margin-bottom: 10px; display: block;">Model Type:</label>
                 <input type="radio" id="moe_model" name="model_type" value="moe" checked>
                 <label for="moe_model">MoE</label>
+                <input type="radio" id="moe_deepseek_model" name="model_type" value="moe_deepseek" style="margin-left: 15px;">
+                <label for="moe_deepseek_model">MoE(Deepseek)</label>
                 <input type="radio" id="llama_model" name="model_type" value="llama" style="margin-left: 15px;">
                 <label for="llama_model">Llama</label>
                 <input type="radio" id="gpt_model" name="model_type" value="gpt" style="margin-left: 15px;">
                 <label for="gpt_model">GPT</label>
+            </div>
+            
+            <div class="input-group lora-inputs" style="display: none;">
+                <div class="input-group">
+                    <label for="q_lora_rank">q_lora_rank：</label>
+                    <input type="number" id="q_lora_rank" class="number-input" value="128">
+                </div>
+                <div class="input-group">
+                    <label for="kv_lora_rank">kv_lora_rank：</label>
+                    <input type="number" id="kv_lora_rank" class="number-input" value="256">
+                </div>
             </div>
             
             <div class="formula-group">
@@ -211,40 +220,43 @@
     </div>
 
     <script>
-        // 添加模型类型切换处理函数
         function handleModelTypeChange() {
             const llamaModel = document.getElementById('llama_model').checked;
             const gptModel = document.getElementById('gpt_model').checked;
+            const moeDeepseekModel = document.getElementById('moe_deepseek_model').checked;
             const shareExpertsInput = document.getElementById('share_experts');
             const topKInput = document.getElementById('top_k');
             const mlpFormulaInput = document.getElementById('mlp_formula');
+            const loraInputs = document.querySelector('.lora-inputs');
+            
+            // 处理 LoRA 输入框的显示/隐藏
+            loraInputs.style.display = moeDeepseekModel ? 'block' : 'none';
             
             if (llamaModel || gptModel) {
-                // Llama/GPT模式：锁定输入框并设置值
+                // Llama/GPT逻辑保持不变
                 shareExpertsInput.value = "1";
                 topKInput.value = "0";
                 shareExpertsInput.disabled = true;
                 topKInput.disabled = true;
                 
-                // 如果是GPT模式，修改MLP公式显示
                 if (gptModel) {
                     mlpFormulaInput.value = "2 * gbs * seq_len * hidden_size * ffn_hidden_size";
                 } else {
                     mlpFormulaInput.value = "3 * gbs * seq_len * hidden_size * ffn_hidden_size";
                 }
             } else {
-                // MoE模式：解锁输入框并恢复原始公式
+                // MoE相关模式
                 shareExpertsInput.disabled = false;
                 topKInput.disabled = false;
                 mlpFormulaInput.value = "3 * gbs * seq_len * hidden_size * ffn_hidden_size";
             }
             
-            // 更新计算结果
             processParameters();
         }
 
-        // 为单选按钮添加事件监听器
+        // 为所有单选按钮添加事件监听器
         document.getElementById('moe_model').addEventListener('change', handleModelTypeChange);
+        document.getElementById('moe_deepseek_model').addEventListener('change', handleModelTypeChange);
         document.getElementById('llama_model').addEventListener('change', handleModelTypeChange);
         document.getElementById('gpt_model').addEventListener('change', handleModelTypeChange);
 
@@ -264,13 +276,14 @@
             const context_parallel = parseFloat(document.getElementById('cp').value);
             const share_experts = parseFloat(document.getElementById('share_experts').value);
             const top_k = parseFloat(document.getElementById('top_k').value);
-            const int15 = parseFloat(document.getElementById('int15').value);
             const step_time = parseFloat(document.getElementById('step_time').value);
+            const moeDeepseekModel = document.getElementById('moe_deepseek_model').checked;
+            const q_lora_rank = moeDeepseekModel ? parseFloat(document.getElementById('q_lora_rank').value) : null;
+            const kv_lora_rank = moeDeepseekModel ? parseFloat(document.getElementById('kv_lora_rank').value) : null;
 
             if (isNaN(gpu_top_flops) || isNaN(gpu_nums) || isNaN(gbs) || isNaN(seq_len) || isNaN(hidden_size) ||
                 isNaN(num_heads) || isNaN(vocab_size) || isNaN(num_query_groups) || isNaN(ffn_hidden_size) || isNaN(layer_nums) ||
-                isNaN(context_parallel) || isNaN(share_experts) || isNaN(top_k) || isNaN(d_model) || isNaN(int15) ||
-                isNaN(step_time)) {
+                isNaN(context_parallel) || isNaN(share_experts) || isNaN(top_k) || isNaN(d_model) || isNaN(step_time)) {
                 document.getElementById('result').innerText = 'Got invalid value!';
                 return;
             }
@@ -289,14 +302,30 @@
                     'gbs', 'seq_len', 'hidden_size', 'vocab_size', 'num_heads', 
                     'd_model', 'num_query_groups', 'ffn_hidden_size', 'layer_nums',
                     'context_parallel', 'share_experts', 'top_k', 'gpu_nums', 'step_time',
-                    'gpu_top_flops', 'is_gpt',
+                    'gpu_top_flops', 'is_gpt', 'q_lora_rank', 'kv_lora_rank',
                     `
                     // 计算 embedding_flops
                     const embedding_flops = ${embedding_formula};
                     
                     // 计算 attention 相关参数
-                    const q_linear = gbs * seq_len * hidden_size ** 2;
-                    const kv_linear = gbs * seq_len * hidden_size * num_query_groups * d_model;
+                    let q_linear, kv_linear;
+                    
+                    if (q_lora_rank !== null) {
+                        const q_down_proj = gbs * seq_len * hidden_size * q_lora_rank;
+                        const q_up_proj = gbs * seq_len * q_lora_rank * num_heads * d_model;
+                        q_linear = q_down_proj + q_up_proj;
+                    } else {
+                        q_linear = gbs * seq_len * hidden_size ** 2;
+                    }
+                    
+                    if (kv_lora_rank !== null) {
+                        const kv_down_proj = gbs * seq_len * hidden_size * kv_lora_rank;
+                        const kv_up_proj = gbs * seq_len * kv_lora_rank * num_heads * d_model * 2;
+                        kv_linear = kv_down_proj + kv_up_proj;
+                    } else {
+                        kv_linear = gbs * seq_len * hidden_size * num_query_groups * d_model * 2;
+                    }
+                    
                     const kv_scores = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
                     const v_projection = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
                     const out_linear = gbs * seq_len * hidden_size ** 2;
@@ -338,7 +367,7 @@
                     gbs, seq_len, hidden_size, vocab_size, num_heads,
                     d_model, num_query_groups, ffn_hidden_size, layer_nums,
                     context_parallel, share_experts, top_k, gpu_nums, step_time,
-                    gpu_top_flops, is_gpt
+                    gpu_top_flops, is_gpt, q_lora_rank, kv_lora_rank
                 );
 
                 document.getElementById('result').innerText = 
