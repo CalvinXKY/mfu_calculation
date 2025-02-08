@@ -189,7 +189,7 @@
             <div class="formula-group">
                 <label>Embedding Flops:</label>
                 <input type="text" class="formula-input" id="embedding_formula" 
-                    value="gbs * seq_len * hidden_size * vocab_size" onchange="updateFormulas()">
+                    value="2 * gbs * seq_len * hidden_size * vocab_size" onchange="updateFormulas()">
             </div>
             <div class="formula-group">
                 <label>Attention Layer Flops:</label>
@@ -199,7 +199,7 @@
             <div class="formula-group">
                 <label>MLP Layer Flops:</label>
                 <input type="text" class="formula-input" id="mlp_formula" 
-                    value="3 * gbs * seq_len * hidden_size * ffn_hidden_size" onchange="updateFormulas()">
+                    value="2 * 3 * gbs * seq_len * hidden_size * ffn_hidden_size" onchange="updateFormulas()">
             </div>
             <div class="formula-group">
                 <label>MoE Layer Flops:</label>
@@ -209,7 +209,7 @@
             <div class="formula-group">
                 <label>Total Model Flops:</label>
                 <input type="text" class="formula-input" id="model_formula" 
-                    value="3 * 2 * (embedding_flops + layer_nums * (attention_layer_flops + moe_layer_flops + layer_norm))" onchange="updateFormulas()">
+                    value="3 * (embedding_flops + layer_nums * (attention_layer_flops + moe_layer_flops + layer_norm))" onchange="updateFormulas()">
             </div>
             <div class="formula-group">
                 <label>MFU Calculation:</label>
@@ -240,15 +240,15 @@
                 topKInput.disabled = true;
                 
                 if (gptModel) {
-                    mlpFormulaInput.value = "2 * gbs * seq_len * hidden_size * ffn_hidden_size";
+                    mlpFormulaInput.value = "2 * 2 * gbs * seq_len * hidden_size * ffn_hidden_size";
                 } else {
-                    mlpFormulaInput.value = "3 * gbs * seq_len * hidden_size * ffn_hidden_size";
+                    mlpFormulaInput.value = "3 * 2 * gbs * seq_len * hidden_size * ffn_hidden_size";
                 }
             } else {
                 // MoE相关模式
                 shareExpertsInput.disabled = false;
                 topKInput.disabled = false;
-                mlpFormulaInput.value = "3 * gbs * seq_len * hidden_size * ffn_hidden_size";
+                mlpFormulaInput.value = "3 * 2 *gbs * seq_len * hidden_size * ffn_hidden_size";
             }
             
             processParameters();
@@ -311,24 +311,24 @@
                     let q_linear, kv_linear;
                     
                     if (q_lora_rank !== null) {
-                        const q_down_proj = gbs * seq_len * hidden_size * q_lora_rank;
-                        const q_up_proj = gbs * seq_len * q_lora_rank * num_heads * d_model;
+                        const q_down_proj = 2 * gbs * seq_len * hidden_size * q_lora_rank;
+                        const q_up_proj = 2 * gbs * seq_len * q_lora_rank * num_heads * d_model;
                         q_linear = q_down_proj + q_up_proj;
                     } else {
-                        q_linear = gbs * seq_len * hidden_size ** 2;
+                        q_linear = 2 * gbs * seq_len * hidden_size ** 2;
                     }
                     
                     if (kv_lora_rank !== null) {
-                        const kv_down_proj = gbs * seq_len * hidden_size * kv_lora_rank;
-                        const kv_up_proj = gbs * seq_len * kv_lora_rank * num_heads * d_model * 2;
+                        const kv_down_proj = 2 * gbs * seq_len * hidden_size * kv_lora_rank;
+                        const kv_up_proj = 2 * gbs * seq_len * kv_lora_rank * num_heads * d_model * 2;
                         kv_linear = kv_down_proj + kv_up_proj;
                     } else {
-                        kv_linear = gbs * seq_len * hidden_size * num_query_groups * d_model * 2;
+                        kv_linear = 2 * gbs * seq_len * hidden_size * num_query_groups * d_model * 2;
                     }
                     
-                    const kv_scores = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
-                    const v_projection = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
-                    const out_linear = gbs * seq_len * hidden_size ** 2;
+                    const kv_scores = 2 * gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
+                    const v_projection = 2 * gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
+                    const out_linear = 2 * gbs * seq_len * hidden_size ** 2;
                     
                     // GPT特殊处理
                     if (is_gpt) {
