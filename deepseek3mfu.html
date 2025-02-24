@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>DeepSeek V3 MFU Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #e8eaed;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .main-content {
+            flex: 0 0 700px;
+            margin-right: 30px;
+        }
+        .formula-sidebar {
+            flex: 1;
+            min-width: 500px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        .formula-block {
+            font-family: monospace;
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-size: 14px;
+            color: #2c3e50;
+            border: 1px solid #ebedef;
+        }
+        h1 {
+            flex: 0 0 100%;
+        }
+        .form-group {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+        }
+        label {
+            display: inline-block;
+            width: 280px;
+            font-weight: 500;
+            color: #333;
+        }
+        input[type="number"], select {
+            width: 160px;
+            padding: 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background-color: #ffffff;
+            color: #374151;
+        }
+        input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.2);
+        }
+        .section {
+            border: 1px solid #d1d5db;
+            padding: 15px 0;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .section h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-bottom: 2px solid #eee;
+            padding: 0 15px 10px;
+        }
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: #f0f9ff;
+            border-radius: 8px;
+            border: 1px solid #bfdbfe;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .result h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            padding: 0 0 10px;
+            border-bottom: 2px solid #c8e6c9;
+        }
+        .result p {
+            margin: 15px 0;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+        .result span {
+            font-weight: bold;
+            color: #4CAF50;
+            min-width: 150px;
+            text-align: right;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            display: block;
+            margin: 0 auto;
+            width: 200px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        h1, h2, h3 {
+            color: #1f2937;
+        }
+        .ads {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background-color: #24292e;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .ads:hover {
+            background-color: #1a1f24;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .ads::after {
+            content: "★";
+            margin-left: 6px;
+            color: #ff7b72;
+        }
+    </style>
+</head>
+<body>
+    <a class="ads" href="https://github.com/CalvinXKY/mfu_calculation">Welcome to star this project❤</a>
+    <h1>DeepSeek V3 MFU Calculator</h1>
+
+    <div class="main-content">
+        <div class="section">
+            <h2>Model Arguments</h2>
+            <div class="form-group">
+                <label>Global Batch Size:</label>
+                <input type="number" id="gbs" value="1024">
+            </div>
+            <div class="form-group">
+                <label>Max Batch Size:</label>
+                <input type="number" id="max_batch_size" value="8">
+            </div>
+            <div class="form-group">
+                <label>Max Sequence Length:</label>
+                <input type="number" id="max_seq_len" value="16384">
+            </div>
+            <div class="form-group">
+                <label>Sequence Length:</label>
+                <input type="number" id="seq_len" value="4096">
+            </div>
+            <div class="form-group">
+                <label>Data Type:</label>
+                <select id="dtype">
+                    <option value="bf16">bf16</option>
+                    <option value="fp8">fp8</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Vocabulary Size:</label>
+                <input type="number" id="vocab_size" value="129280">
+            </div>
+            <div class="form-group">
+                <label>Model Dimension:</label>
+                <input type="number" id="dim" value="7168">
+            </div>
+            <div class="form-group">
+                <label>Intermediate Dimension:</label>
+                <input type="number" id="inter_dim" value="18432">
+            </div>
+            <div class="form-group">
+                <label>MoE Intermediate Dimension:</label>
+                <input type="number" id="moe_inter_dim" value="2048">
+            </div>
+            <div class="form-group">
+                <label>Number of Layers:</label>
+                <input type="number" id="n_layers" value="61">
+            </div>
+            <div class="form-group">
+                <label>Number of Dense Layers:</label>
+                <input type="number" id="n_dense_layers" value="3">
+            </div>
+            <div class="form-group">
+                <label>Number of Heads:</label>
+                <input type="number" id="n_heads" value="128">
+            </div>
+            <div class="form-group">
+                <label>Number of MTP Modules:</label>
+                <input type="number" id="n_mtp_modules" value="2">
+            </div>
+            <div class="form-group">
+                <label>Number of Routed Experts:</label>
+                <input type="number" id="n_routed_experts" value="256">
+            </div>
+            <div class="form-group">
+                <label>Number of Shared Experts:</label>
+                <input type="number" id="n_shared_experts" value="1">
+            </div>
+            <div class="form-group">
+                <label>Number of Activated Experts:</label>
+                <input type="number" id="n_activated_experts" value="8">
+            </div>
+            <div class="form-group">
+                <label>Number of Expert Groups:</label>
+                <input type="number" id="n_expert_groups" value="8">
+            </div>
+            <div class="form-group">
+                <label>Number of Limited Groups:</label>
+                <input type="number" id="n_limited_groups" value="4">
+            </div>
+            <div class="form-group">
+                <label>Q LoRA Rank:</label>
+                <input type="number" id="q_lora_rank" value="1536">
+            </div>
+            <div class="form-group">
+                <label>KV LoRA Rank:</label>
+                <input type="number" id="kv_lora_rank" value="512">
+            </div>
+            <div class="form-group">
+                <label>QK NoPE Head Dimension:</label>
+                <input type="number" id="qk_nope_head_dim" value="128">
+            </div>
+            <div class="form-group">
+                <label>QK RoPE Head Dimension:</label>
+                <input type="number" id="qk_rope_head_dim" value="64">
+            </div>
+            <div class="form-group">
+                <label>V Head Dimension:</label>
+                <input type="number" id="v_head_dim" value="128">
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Calculation Parameters</h2>
+            <div class="form-group">
+                <label>Step Time:</label>
+                <input type="number" id="step_time" value="21.00" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>World Size:</label>
+                <input type="number" id="world_size" value="512">
+            </div>
+            <div class="form-group">
+                <label>GPU Peak BF16 FLOPS:</label>
+                <input type="number" id="gpu_peak_bf16_flops" value="354">
+            </div>
+        </div>
+
+        <button onclick="calculate()">Calculate</button>
+
+        <div class="result" id="result">
+            <h2>Results</h2>
+            <p>MFU: <span id="mfu_result">-</span></p>
+            <p>Total FLOPS: <span id="flops_result">-</span></p>
+        </div>
+    </div>
+    
+    <div class="formula-sidebar">
+        <h2>Calculation Formulas</h2>
+        
+        <h3>Embedding Layer</h3>
+        <div class="formula-block">
+embedding_flops = 2 * gbs * seq_len * dim * vocab_size</div>
+        
+        <h3>MLA (Multi-Head Latent Attention)</h3>
+        <div class="formula-block">
+q_down_proj = 2 * gbs * seq_len * hidden_size * q_lora_rank
+q_up_proj = 2 * gbs * seq_len * q_lora_rank * num_heads * qk_head_dim
+q_linear = q_down_proj + q_up_proj
+
+kv_down_proj = 2 * gbs * seq_len * hidden_size * (kv_lora_rank + qk_rope_head_dim)
+kv_up_proj = 2 * gbs * seq_len * kv_lora_rank * num_heads * (qk_head_dim + v_head_dim)
+kv_linear = kv_down_proj + kv_up_proj
+
+kv_scores = 2 * gbs * seq_len² * num_heads * qk_head_dim
+qkv = 2 * gbs * seq_len² * num_heads * v_head_dim
+
+out_linear = 2 * gbs * seq_len * n_heads * v_head_dim * hidden_size</div>
+
+        <h3>MoE Layer</h3>
+        <div class="formula-block">
+linear_layer_flops = 2 * 3 * gbs * seq_len * hidden_size * moe_inter_dim
+route_flops = 2 * gbs * seq_len * hidden_size * n_routed_experts
+moe_layer_flops = linear_layer_flops * (n_shared_experts + n_activated_experts) + route_flops</div>
+
+        <h3>MLP Layer</h3>
+        <div class="formula-block">
+mlp_flops = 2 * 3 * gbs * seq_len * hidden_size * inter_dim</div>
+
+        <h3>Total FLOPS</h3>
+        <div class="formula-block">
+main_model_flops = 3 * (embedding_flops + 
+    moe_layers * (mla_layer_flops + moe_layer_flops) +
+    n_dense_layers * (mla_layer_flops + mlp_layer_flops))
+
+mtp_flops = 3 * (embedding_flops + mla_layer_flops + moe_layer_flops + linear_proj)
+total_flops = main_model_flops + mtp_flops * n_mtp_modules</div>
+
+        <h3>MFU (Model FLOPS Utilization)</h3>
+        <div class="formula-block">
+mfu = total_flops / (world_size * step_time * 10¹²) / gpu_peak_bf16_flops</div>
+    </div>
+
+    <script>
+        class DeepSeekV3Calculation {
+            constructor(modelArgs) {
+                this.model_args = modelArgs;
+            }
+
+            calcu_embedding_layer() {
+                const args = this.model_args;
+                const embedding_flops = 2 * args.gbs * args.seq_len * args.dim * args.vocab_size;
+                return embedding_flops;
+            }
+
+            calcu_mla_flops() {
+                const args = this.model_args;
+                const gbs = args.gbs;
+                const num_heads = args.n_heads;
+                const hidden_size = args.dim;
+                const qk_head_dim = args.qk_nope_head_dim + args.qk_rope_head_dim;
+
+                let q_down_proj = 2 * args.gbs * args.seq_len * hidden_size * args.q_lora_rank;
+                let q_up_proj = 2 * args.gbs * args.seq_len * args.q_lora_rank * num_heads * qk_head_dim;
+                let q_linear = q_down_proj + q_up_proj;
+
+                let kv_down_proj = 2 * gbs * args.seq_len * hidden_size * (args.kv_lora_rank + args.qk_rope_head_dim);
+                let kv_up_proj = 2 * gbs * args.seq_len * args.kv_lora_rank * num_heads * (qk_head_dim + args.v_head_dim);
+                let kv_linear = kv_down_proj + kv_up_proj;
+
+                const kv_scores = 2 * gbs * Math.pow(args.seq_len, 2) * num_heads * qk_head_dim;
+                const qkv = 2 * gbs * Math.pow(args.seq_len, 2) * num_heads * args.v_head_dim;
+
+                const out_linear = 2 * gbs * args.seq_len * args.n_heads * args.v_head_dim * hidden_size;
+
+                if (args.dtype === 'fp8') {
+                    q_linear /= 2;
+                    kv_linear /= 2;
+                }
+
+                return q_linear + kv_linear + kv_scores + qkv + out_linear;
+            }
+
+            calcu_moe_flops() {
+                const args = this.model_args;
+                const hidden_size = args.dim;
+                const share = args.n_shared_experts;
+                const top_k = args.n_activated_experts;
+
+                let linear_layer_flops = 2 * 3 * args.gbs * args.seq_len * hidden_size * args.moe_inter_dim;
+                const route_flops = 2 * args.gbs * args.seq_len * hidden_size * args.n_routed_experts;
+
+                if (args.dtype === 'fp8') {
+                    linear_layer_flops /= 2;
+                }
+
+                return linear_layer_flops * (share + top_k) + route_flops;
+            }
+
+            calcu_mlp_flops() {
+                const args = this.model_args;
+                const hidden_size = args.dim;
+                let linear_layer_flops = 2 * 3 * args.gbs * args.seq_len * hidden_size * args.inter_dim;
+
+                if (args.dtype === 'fp8') {
+                    linear_layer_flops /= 2;
+                }
+
+                return linear_layer_flops;
+            }
+
+            calcu_main_model() {
+                const moe_layers = this.model_args.n_layers - this.model_args.n_dense_layers;
+                const embedding_flops = this.calcu_embedding_layer();
+                const mla_layer_flops = this.calcu_mla_flops();
+                const moe_layer_flops = this.calcu_moe_flops();
+                const mlp_layer_flops = this.calcu_mlp_flops();
+
+                return 3 * (embedding_flops +
+                    moe_layers * (mla_layer_flops + moe_layer_flops) +
+                    this.model_args.n_dense_layers * (mla_layer_flops + mlp_layer_flops));
+            }
+
+            calcu_mtp_model() {
+                const args = this.model_args;
+                const gbs = args.gbs;
+                const hidden_size = args.dim;
+                let linear_proj = 2 * 3 * gbs * args.seq_len * hidden_size * (hidden_size * 2);
+
+                if (args.dtype === 'fp8') {
+                    linear_proj /= 2;
+                }
+
+                const embedding_flops = this.calcu_embedding_layer();
+                const mla_layer_flops = this.calcu_mla_flops();
+                const moe_layer_flops = this.calcu_moe_flops();
+
+                return 3 * (embedding_flops + mla_layer_flops + moe_layer_flops + linear_proj);
+            }
+
+            calculate(step_time, world_size, gpu_peak_bf16_flops) {
+                const main_model_flops = this.calcu_main_model();
+                const mtp_flops = this.calcu_mtp_model();
+                const total_flops = main_model_flops + mtp_flops * this.model_args.n_mtp_modules;
+                const mfu = total_flops / (world_size * step_time * (10 ** 12)) / gpu_peak_bf16_flops;
+                return [mfu, total_flops];
+            }
+        }
+
+        function calculate() {
+            const modelArgs = {
+                gbs: Number(document.getElementById('gbs').value),
+                max_batch_size: Number(document.getElementById('max_batch_size').value),
+                max_seq_len: Number(document.getElementById('max_seq_len').value),
+                seq_len: Number(document.getElementById('seq_len').value),
+                dtype: document.getElementById('dtype').value,
+                vocab_size: Number(document.getElementById('vocab_size').value),
+                dim: Number(document.getElementById('dim').value),
+                inter_dim: Number(document.getElementById('inter_dim').value),
+                moe_inter_dim: Number(document.getElementById('moe_inter_dim').value),
+                n_layers: Number(document.getElementById('n_layers').value),
+                n_dense_layers: Number(document.getElementById('n_dense_layers').value),
+                n_heads: Number(document.getElementById('n_heads').value),
+                n_mtp_modules: Number(document.getElementById('n_mtp_modules').value),
+                n_routed_experts: Number(document.getElementById('n_routed_experts').value),
+                n_shared_experts: Number(document.getElementById('n_shared_experts').value),
+                n_activated_experts: Number(document.getElementById('n_activated_experts').value),
+                n_expert_groups: Number(document.getElementById('n_expert_groups').value),
+                n_limited_groups: Number(document.getElementById('n_limited_groups').value),
+                q_lora_rank: Number(document.getElementById('q_lora_rank').value),
+                kv_lora_rank: Number(document.getElementById('kv_lora_rank').value),
+                qk_nope_head_dim: Number(document.getElementById('qk_nope_head_dim').value),
+                qk_rope_head_dim: Number(document.getElementById('qk_rope_head_dim').value),
+                v_head_dim: Number(document.getElementById('v_head_dim').value),
+            };
+
+            const step_time = Number(document.getElementById('step_time').value);
+            const world_size = Number(document.getElementById('world_size').value);
+            const gpu_peak_bf16_flops = Number(document.getElementById('gpu_peak_bf16_flops').value);
+
+            const calculator = new DeepSeekV3Calculation(modelArgs);
+            const [mfu, total_flops] = calculator.calculate(step_time, world_size, gpu_peak_bf16_flops);
+
+            document.getElementById('mfu_result').textContent = mfu.toFixed(4);
+            document.getElementById('flops_result').textContent = total_flops.toExponential(4);
+        }
+    </script>
+</body>
+</html>
