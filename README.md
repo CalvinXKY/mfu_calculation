@@ -2,11 +2,18 @@
 
 **MFU计算器**：用于评估LLM训练的MFU（Model Flops Utilization）计算工具，
 
-在线MoE运行工具：[链接](https://calvinxky.github.io/mfu_calculation/) 
+在线MFU运行工具：[链接](https://calvinxky.github.io/mfu_calculation/) 
+
+Deepseek3 mfu计算在线运行：[链接](https://calvinxky.github.io/mfu_calculation/deepseek3mfu.html) 
 
 [mfu_calculation](mfu_calculation.ipynb)里面给出了简化版本的MFU计算器，可以在colab运行。
 
 [mfu_detail](./mfu_detail.ipynb) 给出了MFU计算器搭建的详解。 
+
+# 更新：
+
+2025/2/25：添加deepseek-V3 mfu计算部分
+
 
 # 内容：
 
@@ -166,6 +173,30 @@ def calcu_attention_flops(batch_size, seq_len, heads, d_model, num_query_groups=
 ![mla计算公式](./images/mla_formulas.png)
 
 构建其mfu的计算时，关注linear和attention的部分，flops的调整如下：
+
+```
+# 计算公式如下
+        # attention flops:
+        args = self.model_args
+        gbs = args.gbs
+        num_heads = args.n_heads
+        hidden_size = args.dim
+        qk_head_dim = args.qk_nope_head_dim + args.qk_rope_head_dim
+        q_down_proj = 2 * args.gbs * args.seq_len * hidden_size * args.q_lora_rank
+        q_up_proj = 2 * args.gbs * args.seq_len * args.q_lora_rank * num_heads * qk_head_dim
+        q_linear = q_down_proj + q_up_proj
+
+        kv_down_proj = 2 * gbs * args.seq_len * hidden_size * (args.kv_lora_rank + args.qk_rope_head_dim)
+        kv_up_proj = 2 * gbs * args.seq_len * args.kv_lora_rank * num_heads * (qk_head_dim + args.v_head_dim)
+        kv_linear = kv_down_proj + kv_up_proj
+
+        kv_scores = 2 * gbs * args.seq_len ** 2 * num_heads * qk_head_dim
+        qkv = 2 * gbs * args.seq_len ** 2 * num_heads * args.v_head_dim
+
+        out_linear = 2 * gbs * args.seq_len * args.n_heads * args.v_head_dim * hidden_size
+```
+
+进一步简化：
 ```
 def calcu_mla_flops(batch_size, seq_len, heads, d_model, q_lora_rank, kv_lora_rank, context_parallel=1):
     q_down_proj = calcu_linear_flops(batch_size, seq_len, heads * d_model, 1, q_lora_rank)         
@@ -175,7 +206,7 @@ def calcu_mla_flops(batch_size, seq_len, heads, d_model, q_lora_rank, kv_lora_ra
     kv_up_proj =calcu_linear_flops(batch_size, seq_len, kv_lora_rank, heads, d_model) * 2
     kv_linear = kv_down_proj + kv_up_proj
 
-    kv_scores_flops = 2 * batch_size * seq_len**2 * heads * d_model * (context_parallel + 1) / (2 * context_parallel)
+    kv_scores_flops = 2 * batch_size * seq_len**2 * heads * d_model
     mask_flops = batch_size * heads *  seq_len * seq_len
     softmax_flops = 3 * batch_size * heads * seq_len * (seq_len - 1)
 
@@ -511,12 +542,6 @@ def calcu_moe_mfu(iter_time, batch_size, seq_len, heads, d_model, hidden_size, v
     return model_flops / (iter_time * device_peak_flops * device_nums * 10 ** 12)
 ```
 
-```
-def calcu_moe_deepseek_mfu(iter_time, batch_size, seq_len, heads, d_model, hidden_size, vocab_size, ffn_hidden_size, layer_nums, q_lora_rank, kv_lora_rank, topk, shared, experts, device_nums, device_peak_flops):
-    model_flops = caclu_moe_deepseek_flops(batch_size, seq_len, heads, d_model, hidden_size, vocab_size, ffn_hidden_size, layer_nums, q_lora_rank, kv_lora_rank, topk, shared, experts)
-    return model_flops / (iter_time * device_peak_flops * device_nums * 10 ** 12)
-```
-
 测试：
 ```
 calcu_moe_mfu(iter_time=1.5,
@@ -526,13 +551,6 @@ calcu_moe_mfu(iter_time=1.5,
        device_nums=1024, device_peak_flops=280)
 ```
 
-```
-calcu_moe_deepseek_mfu(iter_time=1.5,
-            batch_size=1024, seq_len=4096, heads=8, d_model=128,
-            hidden_size=1024, vocab_size=32768, ffn_hidden_size=2048,
-            layer_nums=100, q_lora_rank=128, kv_lora_rank=256, topk=8, shared=1, experts=100,
-            device_nums=1024, device_peak_flops=280)
-```
 
 # 参考内容：
 
