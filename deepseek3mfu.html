@@ -12,6 +12,7 @@
             background-color: #e8eaed;
             display: flex;
             flex-wrap: wrap;
+            justify-content: center;
         }
         .main-content {
             flex: 0 0 700px;
@@ -133,10 +134,13 @@
         h1, h2, h3 {
             color: #1f2937;
         }
+        .ads-container {
+            width: 100%;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
         .ads {
-            position: fixed;
-            top: 20px;
-            left: 20px;
             background-color: #24292e;
             color: white;
             padding: 8px 16px;
@@ -147,22 +151,31 @@
             align-items: center;
             transition: all 0.3s ease;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            z-index: 1000;
         }
         .ads:hover {
             background-color: #1a1f24;
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-        .ads::after {
+        .ads.github::after {
             content: "★";
             margin-left: 6px;
             color: #ff7b72;
         }
+        .ads.index {
+            background-color: #4CAF50;
+        }
+        .ads.index:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
-    <a class="ads" href="https://github.com/CalvinXKY/mfu_calculation">Welcome to star this project❤</a>
+    <div class="ads-container">
+        <a class="ads github" href="https://github.com/CalvinXKY/mfu_calculation">Welcome to star this project❤</a>
+        <a class="ads index" href="https://calvinxky.github.io/mfu_calculation">Back to MFU Calculator</a>
+    </div>
+    
     <h1>DeepSeek V3 MFU Calculator</h1>
 
     <div class="main-content">
