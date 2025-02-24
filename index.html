@@ -85,11 +85,50 @@
             padding: 5px;
             margin-top: 5px;
         }
+        .ads-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .ads {
+            background-color: #24292e;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .ads:hover {
+            background-color: #1a1f24;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .ads.github::after {
+            content: "★";
+            margin-left: 6px;
+            color: #ff7b72;
+        }
+        .ads.deepseek {
+            background-color: #4CAF50;
+        }
+        .ads.deepseek:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 
-<a class="ads" href="https://github.com/CalvinXKY/mfu_calculation">Welcome to star this project❤</a>
 <body>
+    <div class="ads-container">
+        <a class="ads github" href="https://github.com/CalvinXKY/mfu_calculation">Welcome to star this project❤</a>
+        <a class="ads deepseek" href="https://calvinxky.github.io/mfu_calculation/deepseek3mfu.html">DeepSeek V3 Calculator</a>
+    </div>
     <div class="main-container">
         <div class="input-container">
             <h1 style="text-align: center;">MFU Calculation</h1>
@@ -151,6 +190,10 @@
                     <input type="number" id="top_k" class="number-input" value="8">
                 </div>
                 <div class="input-group">
+                    <label for="int15">None（default）</label>
+                    <input type="number" id="int15" class="number-input" value="0">
+                </div>
+                <div class="input-group">
                     <label for="step_time">step_time(s)：</label>
                     <input type="number" id="step_time" class="number-input" step="0.01" value="1.5">
                 </div>
@@ -158,105 +201,89 @@
             <button onclick="processParameters()">Get Result</button>
             <div class="result" id="result">0</div>
         </div>
-        
+
         <div class="formula-container">
             <h2>Calculation Formulas</h2>
-            
+
             <!-- 添加模型选择单选按钮组 -->
             <div class="model-selector" style="margin-bottom: 20px;">
                 <label style="font-weight: bold; margin-bottom: 10px; display: block;">Model Type:</label>
                 <input type="radio" id="moe_model" name="model_type" value="moe" checked>
                 <label for="moe_model">MoE</label>
-                <input type="radio" id="moe_deepseek_model" name="model_type" value="moe_deepseek" style="margin-left: 15px;">
-                <label for="moe_deepseek_model">MoE(Deepseek)</label>
                 <input type="radio" id="llama_model" name="model_type" value="llama" style="margin-left: 15px;">
                 <label for="llama_model">Llama</label>
                 <input type="radio" id="gpt_model" name="model_type" value="gpt" style="margin-left: 15px;">
                 <label for="gpt_model">GPT</label>
             </div>
-            
-            <div class="input-group lora-inputs" style="display: none;">
-                <div class="input-group">
-                    <label for="q_lora_rank">q_lora_rank：</label>
-                    <input type="number" id="q_lora_rank" class="number-input" value="128">
-                </div>
-                <div class="input-group">
-                    <label for="kv_lora_rank">kv_lora_rank：</label>
-                    <input type="number" id="kv_lora_rank" class="number-input" value="256">
-                </div>
-            </div>
-            
+
             <div class="formula-group">
                 <label>Embedding Flops:</label>
-                <input type="text" class="formula-input" id="embedding_formula" 
-                    value="2 * gbs * seq_len * hidden_size * vocab_size" onchange="updateFormulas()">
+                <input type="text" class="formula-input" id="embedding_formula"
+                    value="gbs * seq_len * hidden_size * vocab_size" onchange="updateFormulas()">
             </div>
             <div class="formula-group">
                 <label>Attention Layer Flops:</label>
-                <input type="text" class="formula-input" id="attention_formula" 
+                <input type="text" class="formula-input" id="attention_formula"
                     value="q_linear + kv_linear + kv_scores + v_projection + out_linear" onchange="updateFormulas()">
             </div>
             <div class="formula-group">
                 <label>MLP Layer Flops:</label>
-                <input type="text" class="formula-input" id="mlp_formula" 
-                    value="2 * 3 * gbs * seq_len * hidden_size * ffn_hidden_size" onchange="updateFormulas()">
+                <input type="text" class="formula-input" id="mlp_formula"
+                    value="3 * gbs * seq_len * hidden_size * ffn_hidden_size" onchange="updateFormulas()">
             </div>
             <div class="formula-group">
                 <label>MoE Layer Flops:</label>
-                <input type="text" class="formula-input" id="moe_formula" 
+                <input type="text" class="formula-input" id="moe_formula"
                     value="mlp_layer_flops * (share_experts + top_k)" onchange="updateFormulas()">
             </div>
             <div class="formula-group">
                 <label>Total Model Flops:</label>
-                <input type="text" class="formula-input" id="model_formula" 
-                    value="3 * (embedding_flops + layer_nums * (attention_layer_flops + moe_layer_flops + layer_norm))" onchange="updateFormulas()">
+                <input type="text" class="formula-input" id="model_formula"
+                    value="3 * 2 * (embedding_flops + layer_nums * (attention_layer_flops + moe_layer_flops + layer_norm))" onchange="updateFormulas()">
             </div>
             <div class="formula-group">
                 <label>MFU Calculation:</label>
-                <input type="text" class="formula-input" id="mfu_formula" 
+                <input type="text" class="formula-input" id="mfu_formula"
                     value="model_flops / (gpu_nums * step_time * (10 ** 12)) / gpu_top_flops" onchange="updateFormulas()">
             </div>
         </div>
     </div>
 
     <script>
+        // 添加模型类型切换处理函数
         function handleModelTypeChange() {
             const llamaModel = document.getElementById('llama_model').checked;
             const gptModel = document.getElementById('gpt_model').checked;
-            const moeDeepseekModel = document.getElementById('moe_deepseek_model').checked;
             const shareExpertsInput = document.getElementById('share_experts');
             const topKInput = document.getElementById('top_k');
             const mlpFormulaInput = document.getElementById('mlp_formula');
-            const loraInputs = document.querySelector('.lora-inputs');
-            
-            // 处理 LoRA 输入框的显示/隐藏
-            loraInputs.style.display = moeDeepseekModel ? 'block' : 'none';
-            
+
             if (llamaModel || gptModel) {
-                // Llama/GPT逻辑保持不变
+                // Llama/GPT模式：锁定输入框并设置值
                 shareExpertsInput.value = "1";
                 topKInput.value = "0";
                 shareExpertsInput.disabled = true;
                 topKInput.disabled = true;
-                
+
+                // 如果是GPT模式，修改MLP公式显示
                 if (gptModel) {
-                    mlpFormulaInput.value = "2 * 2 * gbs * seq_len * hidden_size * ffn_hidden_size";
+                    mlpFormulaInput.value = "2 * gbs * seq_len * hidden_size * ffn_hidden_size";
                 } else {
-                    mlpFormulaInput.value = "3 * 2 * gbs * seq_len * hidden_size * ffn_hidden_size";
+                    mlpFormulaInput.value = "3 * gbs * seq_len * hidden_size * ffn_hidden_size";
                 }
             } else {
-                // MoE相关模式
+                // MoE模式：解锁输入框并恢复原始公式
                 shareExpertsInput.disabled = false;
                 topKInput.disabled = false;
-                mlpFormulaInput.value = "3 * 2 *gbs * seq_len * hidden_size * ffn_hidden_size";
+                mlpFormulaInput.value = "3 * gbs * seq_len * hidden_size * ffn_hidden_size";
             }
-            
+
+            // 更新计算结果
             processParameters();
         }
 
-        // 为所有单选按钮添加事件监听器
+        // 为单选按钮添加事件监听器
         document.getElementById('moe_model').addEventListener('change', handleModelTypeChange);
-        document.getElementById('moe_deepseek_model').addEventListener('change', handleModelTypeChange);
         document.getElementById('llama_model').addEventListener('change', handleModelTypeChange);
         document.getElementById('gpt_model').addEventListener('change', handleModelTypeChange);
 
@@ -276,14 +303,13 @@
             const context_parallel = parseFloat(document.getElementById('cp').value);
             const share_experts = parseFloat(document.getElementById('share_experts').value);
             const top_k = parseFloat(document.getElementById('top_k').value);
+            const int15 = parseFloat(document.getElementById('int15').value);
             const step_time = parseFloat(document.getElementById('step_time').value);
-            const moeDeepseekModel = document.getElementById('moe_deepseek_model').checked;
-            const q_lora_rank = moeDeepseekModel ? parseFloat(document.getElementById('q_lora_rank').value) : null;
-            const kv_lora_rank = moeDeepseekModel ? parseFloat(document.getElementById('kv_lora_rank').value) : null;
 
             if (isNaN(gpu_top_flops) || isNaN(gpu_nums) || isNaN(gbs) || isNaN(seq_len) || isNaN(hidden_size) ||
                 isNaN(num_heads) || isNaN(vocab_size) || isNaN(num_query_groups) || isNaN(ffn_hidden_size) || isNaN(layer_nums) ||
-                isNaN(context_parallel) || isNaN(share_experts) || isNaN(top_k) || isNaN(d_model) || isNaN(step_time)) {
+                isNaN(context_parallel) || isNaN(share_experts) || isNaN(top_k) || isNaN(d_model) || isNaN(int15) ||
+                isNaN(step_time)) {
                 document.getElementById('result').innerText = 'Got invalid value!';
                 return;
             }
@@ -299,37 +325,21 @@
 
                 // 创建计算函数
                 const calculateResult = new Function(
-                    'gbs', 'seq_len', 'hidden_size', 'vocab_size', 'num_heads', 
+                    'gbs', 'seq_len', 'hidden_size', 'vocab_size', 'num_heads',
                     'd_model', 'num_query_groups', 'ffn_hidden_size', 'layer_nums',
                     'context_parallel', 'share_experts', 'top_k', 'gpu_nums', 'step_time',
-                    'gpu_top_flops', 'is_gpt', 'q_lora_rank', 'kv_lora_rank',
+                    'gpu_top_flops', 'is_gpt',
                     `
                     // 计算 embedding_flops
                     const embedding_flops = ${embedding_formula};
-                    
+
                     // 计算 attention 相关参数
-                    let q_linear, kv_linear;
-                    
-                    if (q_lora_rank !== null) {
-                        const q_down_proj = 2 * gbs * seq_len * hidden_size * q_lora_rank;
-                        const q_up_proj = 2 * gbs * seq_len * q_lora_rank * num_heads * d_model;
-                        q_linear = q_down_proj + q_up_proj;
-                    } else {
-                        q_linear = 2 * gbs * seq_len * hidden_size ** 2;
-                    }
-                    
-                    if (kv_lora_rank !== null) {
-                        const kv_down_proj = 2 * gbs * seq_len * hidden_size * kv_lora_rank;
-                        const kv_up_proj = 2 * gbs * seq_len * kv_lora_rank * num_heads * d_model * 2;
-                        kv_linear = kv_down_proj + kv_up_proj;
-                    } else {
-                        kv_linear = 2 * gbs * seq_len * hidden_size * num_query_groups * d_model * 2;
-                    }
-                    
-                    const kv_scores = 2 * gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
-                    const v_projection = 2 * gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
-                    const out_linear = 2 * gbs * seq_len * hidden_size ** 2;
-                    
+                    const q_linear = gbs * seq_len * hidden_size ** 2;
+                    const kv_linear = gbs * seq_len * hidden_size * num_query_groups * d_model;
+                    const kv_scores = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
+                    const v_projection = gbs * seq_len**2 * num_heads * d_model * (context_parallel + 1) / (2 * context_parallel);
+                    const out_linear = gbs * seq_len * hidden_size ** 2;
+
                     // GPT特殊处理
                     if (is_gpt) {
                         // 修改 mlp_layer_flops 的计算公式，将系数从 3 改为 2
@@ -339,21 +349,21 @@
                         // 非 GPT 模式使用原始公式
                         mlp_layer_flops = ${mlp_formula};
                     }
-                    
+
                     // 计算 attention_layer_flops
                     const attention_layer_flops = ${attention_formula};
-                    
+
                     const layer_norm = gbs * seq_len * hidden_size;
-                    
+
                     // 计算 moe_layer_flops
                     const moe_layer_flops = ${moe_formula};
-                    
+
                     // 计算总 model_flops
                     const model_flops = ${model_formula};
-                    
+
                     // 计算 MFU
                     const mfu = ${mfu_formula};
-                    
+
                     return {
                         tflops_per_gpu: model_flops / (10 ** 12) / gpu_nums,
                         mfu: mfu
@@ -367,7 +377,7 @@
                     gbs, seq_len, hidden_size, vocab_size, num_heads,
                     d_model, num_query_groups, ffn_hidden_size, layer_nums,
                     context_parallel, share_experts, top_k, gpu_nums, step_time,
-                    gpu_top_flops, is_gpt, q_lora_rank, kv_lora_rank
+                    gpu_top_flops, is_gpt
                 );
 
                 document.getElementById('result').innerText = 
