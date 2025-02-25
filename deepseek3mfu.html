@@ -379,11 +379,12 @@ mfu = total_flops / (world_size * step_time * 10¹²) / gpu_peak_bf16_flops</div
                 const kv_scores = 2 * gbs * Math.pow(args.seq_len, 2) * num_heads * qk_head_dim;
                 const qkv = 2 * gbs * Math.pow(args.seq_len, 2) * num_heads * args.v_head_dim;
 
-                const out_linear = 2 * gbs * args.seq_len * args.n_heads * args.v_head_dim * hidden_size;
+                let out_linear = 2 * gbs * args.seq_len * args.n_heads * args.v_head_dim * hidden_size;
 
                 if (args.dtype === 'fp8') {
                     q_linear /= 2;
                     kv_linear /= 2;
+                    out_linear /= 2;
                 }
 
                 return q_linear + kv_linear + kv_scores + qkv + out_linear;

@@ -98,6 +98,7 @@ class DeepSeekV3Calculation:
         if args.dtype == 'fp8':
             q_linear /= 2
             kv_linear /= 2
+            out_linear /= 2
         attention_layer_flops = q_linear + kv_linear + kv_scores + qkv + out_linear
         return attention_layer_flops
 

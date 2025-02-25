@@ -427,6 +427,28 @@ def calcu_router_flops(batch_size, seq_len, hidden_size, experts):
 
 ```
 
+## MTP模块
+
+MTP(Multi-Token Prediction) 参考DeepSeekV3里面MTP内容，如下所示：
+
+![MTP](./images/mtp_architecture.png)
+
+MTP Module主要的结构:
+* embedding/output head
+* transformer block
+* linear proj
+* RMSNorm
+
+所有模块计算均能复用前面的内容，需要注意的是linear proj的输入是两个输入Concat后的数值。计算参考:
+
+```
+        linear_proj = 2 * 3 * gbs * args.seq_len * hidden_size * (hidden_size * 2)
+        embedding_flops = self.calcu_embedding_layer()
+        mla_layer_flops = self.calcu_mla_flops()
+        moe_layer_flops = self.calcu_moe_flops()
+        mtp_flops = 3 * (embedding_flops + mla_layer_flops + moe_layer_flops + linear_proj)
+```
+
 # 典型训练模型的flops计算
 
 训练估算约定:
