@@ -74,7 +74,7 @@
             margin-bottom: 25px;
             border-radius: 8px;
             background-color: #f8f9fa;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             max-width: 700px;
             margin-left: auto;
             margin-right: auto;
@@ -85,6 +85,19 @@
             color: #2c3e50;
             border-bottom: 2px solid #eee;
             padding: 0 15px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section h2 .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        .section h2 button {
+            padding: 6px 12px;
+            font-size: 14px;
+            width: auto;
+            margin: 0;
         }
         .result {
             margin-top: 25px;
@@ -124,8 +137,8 @@
             cursor: pointer;
             font-size: 16px;
             transition: background-color 0.3s;
-            display: block;
-            margin: 0 auto;
+            display: inline-block;
+            margin: 0 10px;
             width: 200px;
         }
         button:hover {
@@ -168,6 +181,24 @@
         .ads.index:hover {
             background-color: #45a049;
         }
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .drop-zone {
+            border: 2px dashed #4CAF50;
+            border-radius: 4px;
+            padding: 20px;
+            text-align: center;
+            margin: 20px auto;
+            max-width: 700px;
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+        .drop-zone.dragover {
+            background-color: #e8f5e9;
+            border-color: #2e7d32;
+        }
     </style>
 </head>
 <body>
@@ -180,7 +211,14 @@
 
     <div class="main-content">
         <div class="section">
-            <h2>Model Arguments</h2>
+            <h2>
+                Model Arguments
+                <div class="button-group">
+                    <button onclick="saveParameters()">Save Parameters</button>
+                    <button onclick="document.getElementById('fileInput').click()">Load Parameters</button>
+                    <input type="file" id="fileInput" style="display: none" accept=".json">
+                </div>
+            </h2>
             <div class="form-group">
                 <label>Global Batch Size:</label>
                 <input type="number" id="gbs" value="1024">
@@ -294,7 +332,9 @@
             </div>
         </div>
 
-        <button onclick="calculate()">Calculate</button>
+        <div class="button-container">
+            <button onclick="calculate()">Calculate</button>
+        </div>
 
         <div class="result" id="result">
             <h2>Results</h2>
@@ -492,6 +532,117 @@ mfu = total_flops / (world_size * step_time * 10¹²) / gpu_peak_bf16_flops</div
 
             document.getElementById('mfu_result').textContent = mfu.toFixed(4);
             document.getElementById('flops_result').textContent = total_flops.toExponential(4);
+        }
+
+        function saveParameters() {
+            const params = {
+                gbs: Number(document.getElementById('gbs').value),
+                max_batch_size: Number(document.getElementById('max_batch_size').value),
+                max_seq_len: Number(document.getElementById('max_seq_len').value),
+                seq_len: Number(document.getElementById('seq_len').value),
+                dtype: document.getElementById('dtype').value,
+                vocab_size: Number(document.getElementById('vocab_size').value),
+                dim: Number(document.getElementById('dim').value),
+                inter_dim: Number(document.getElementById('inter_dim').value),
+                moe_inter_dim: Number(document.getElementById('moe_inter_dim').value),
+                n_layers: Number(document.getElementById('n_layers').value),
+                n_dense_layers: Number(document.getElementById('n_dense_layers').value),
+                n_heads: Number(document.getElementById('n_heads').value),
+                n_mtp_modules: Number(document.getElementById('n_mtp_modules').value),
+                n_routed_experts: Number(document.getElementById('n_routed_experts').value),
+                n_shared_experts: Number(document.getElementById('n_shared_experts').value),
+                n_activated_experts: Number(document.getElementById('n_activated_experts').value),
+                n_expert_groups: Number(document.getElementById('n_expert_groups').value),
+                n_limited_groups: Number(document.getElementById('n_limited_groups').value),
+                route_scale: 2.5,
+                score_func: "sigmoid",
+                q_lora_rank: Number(document.getElementById('q_lora_rank').value),
+                kv_lora_rank: Number(document.getElementById('kv_lora_rank').value),
+                qk_nope_head_dim: Number(document.getElementById('qk_nope_head_dim').value),
+                qk_rope_head_dim: Number(document.getElementById('qk_rope_head_dim').value),
+                v_head_dim: Number(document.getElementById('v_head_dim').value)
+            };
+
+            // 创建一个隐藏的文件选择器
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.style.display = 'none';
+            fileInput.nwsaveas = 'deepseek_parameters.json'; // 设置默认文件名
+            fileInput.accept = '.json';
+
+            // 将文件选择器添加到文档中
+            document.body.appendChild(fileInput);
+
+            // 创建 Blob 对象
+            const blob = new Blob([JSON.stringify(params, null, 2)], { type: 'application/json' });
+
+            // 创建下载链接
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'deepseek_parameters.json';
+
+            // 触发文件保存对话框
+            a.click();
+
+            // 清理
+            URL.revokeObjectURL(a.href);
+            document.body.removeChild(fileInput);
+        }
+
+        function loadParameters(jsonData) {
+            try {
+                const params = JSON.parse(jsonData);
+                
+                // 更新表单字段
+                for (const [key, value] of Object.entries(params)) {
+                    const element = document.getElementById(key);
+                    if (element) {
+                        element.value = value;
+                    }
+                }
+                
+                calculate(); // 自动计算新参数的结果
+            } catch (error) {
+                console.error('Error loading parameters:', error);
+                alert('加载参数文件失败，请确保文件格式正确');
+            }
+        }
+
+        // 添加拖拽功能到整个文档
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        // 移除之前的 dropZone 相关代码，保留 fileInput 和 handleFile 相关代码
+        const fileInput = document.getElementById('fileInput');
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        });
+
+        function handleFile(file) {
+            if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+                alert('请上传JSON文件');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                loadParameters(e.target.result);
+            };
+            reader.readAsText(file);
         }
     </script>
 </body>
