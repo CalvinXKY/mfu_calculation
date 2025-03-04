@@ -314,6 +314,13 @@
                 <label>V Head Dimension:</label>
                 <input type="number" id="v_head_dim" value="128">
             </div>
+            <div class="form-group">
+                <label>Causal Mask:</label>
+                <select id="causal_mask">
+                    <option value="false">False</option>
+                    <option value="true">True</option>
+                </select>
+            </div>
         </div>
 
         <div class="section">
@@ -360,8 +367,9 @@ kv_down_proj = 2 * gbs * seq_len * hidden_size * (kv_lora_rank + qk_rope_head_di
 kv_up_proj = 2 * gbs * seq_len * kv_lora_rank * num_heads * (qk_head_dim + v_head_dim)
 kv_linear = kv_down_proj + kv_up_proj
 
-kv_scores = 2 * gbs * seq_len² * num_heads * qk_head_dim
-qkv = 2 * gbs * seq_len² * num_heads * v_head_dim
+// When causal_mask is True:
+kv_scores = (2 * gbs * seq_len² * num_heads * qk_head_dim) / (causal_mask ? 2 : 1)
+qkv = (2 * gbs * seq_len² * num_heads * v_head_dim) / (causal_mask ? 2 : 1)
 
 out_linear = 2 * gbs * seq_len * n_heads * v_head_dim * hidden_size</div>
 
@@ -416,8 +424,13 @@ mfu = total_flops / (world_size * step_time * 10¹²) / gpu_peak_bf16_flops</div
                 let kv_up_proj = 2 * gbs * args.seq_len * args.kv_lora_rank * num_heads * (qk_head_dim + args.v_head_dim);
                 let kv_linear = kv_down_proj + kv_up_proj;
 
-                const kv_scores = 2 * gbs * Math.pow(args.seq_len, 2) * num_heads * qk_head_dim;
-                const qkv = 2 * gbs * Math.pow(args.seq_len, 2) * num_heads * args.v_head_dim;
+                let kv_scores = 2 * gbs * Math.pow(args.seq_len, 2) * num_heads * qk_head_dim;
+                let qkv = 2 * gbs * Math.pow(args.seq_len, 2) * num_heads * args.v_head_dim;
+
+                if (args.causal_mask) {
+                    kv_scores /= 2;
+                    qkv /= 2;
+                }
 
                 let out_linear = 2 * gbs * args.seq_len * args.n_heads * args.v_head_dim * hidden_size;
 
@@ -521,6 +534,7 @@ mfu = total_flops / (world_size * step_time * 10¹²) / gpu_peak_bf16_flops</div
                 qk_nope_head_dim: Number(document.getElementById('qk_nope_head_dim').value),
                 qk_rope_head_dim: Number(document.getElementById('qk_rope_head_dim').value),
                 v_head_dim: Number(document.getElementById('v_head_dim').value),
+                causal_mask: document.getElementById('causal_mask').value === 'true',
             };
 
             const step_time = Number(document.getElementById('step_time').value);
@@ -560,7 +574,8 @@ mfu = total_flops / (world_size * step_time * 10¹²) / gpu_peak_bf16_flops</div
                 kv_lora_rank: Number(document.getElementById('kv_lora_rank').value),
                 qk_nope_head_dim: Number(document.getElementById('qk_nope_head_dim').value),
                 qk_rope_head_dim: Number(document.getElementById('qk_rope_head_dim').value),
-                v_head_dim: Number(document.getElementById('v_head_dim').value)
+                v_head_dim: Number(document.getElementById('v_head_dim').value),
+                causal_mask: document.getElementById('causal_mask').value === 'true',
             };
 
             // 创建一个隐藏的文件选择器
